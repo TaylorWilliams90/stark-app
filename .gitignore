@@ -1,0 +1,16 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+*.tfvars
+ 
+# Next.js
+nextjs-app/node_modules/
+nextjs-app/.next/
+nextjs-app/.env*
+ 
+# OS
+.DS_Store
+Thumbs.db
+ 
