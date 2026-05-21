@@ -7,24 +7,6 @@
 
 A containerized Next.js full-stack application managed and orchestrated via Infrastructure-as-Code (IaC) using Terraform. This repository demonstrates standard DevOps blueprints for local container deployments, automated environment isolation, and predictable application lifecycles.
 
----
-
-## 🏗️ Project Architecture & Layout
-
-The project follows a decoupled architecture, separating the local system infrastructure definition from the core application source logic:
-
-```text
-├── .terraform/                 # Local Terraform provider caches
-├── nextjs-app/                 # Core Front-end / Back-end Application
-│   ├── src/                    # App routing, components, and layout views
-│   ├── Dockerfile              # Multi-stage production runtime container configuration
-│   ├── .dockerignore           # Optimized build exclusion rules
-│   ├── package.json            # Node dependency tree
-│   └── tsconfig.json           # TypeScript configuration
-├── main.tf                     # Infrastructure declarations (Docker provider setup)
-├── .terraform.lock.hcl         # Provider version state lockfile
-└── README.md                   # Project documentation
-
 ## 🚀 Getting Started
 Prerequisites
 Ensure you have the following runtimes and engines installed locally:
@@ -96,3 +78,22 @@ Styling Engine: CSS Modules / Global Sheets
 Infrastructure Compilation Engine: Terraform
 
 Container Virtualization Engine: Docker
+
+---
+
+## 🏗️ Project Architecture & Layout
+
+The project follows a decoupled architecture, separating the local system infrastructure definition from the core application source logic:
+
+```text
+├── .terraform/                 # Local Terraform provider caches
+├── nextjs-app/                 # Core Front-end / Back-end Application
+│   ├── src/                    # App routing, components, and layout views
+│   ├── Dockerfile              # Multi-stage production runtime container configuration
+│   ├── .dockerignore           # Optimized build exclusion rules
+│   ├── package.json            # Node dependency tree
+│   └── tsconfig.json           # TypeScript configuration
+├── main.tf                     # Infrastructure declarations (Docker provider setup)
+├── .terraform.lock.hcl         # Provider version state lockfile
+└── README.md                   # Project documentation
+
