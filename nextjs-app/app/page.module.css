@@ -1,0 +1,223 @@
+.main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 1.5rem 4rem;
+}
+
+/* ── Hero ── */
+.hero {
+  padding: 5rem 0 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.heroBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--success);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--success);
+  padding: 0.35rem 0.75rem;
+  width: fit-content;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  background: var(--success);
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+.title {
+  font-size: clamp(3rem, 8vw, 5.5rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1;
+  color: var(--text);
+}
+
+.accent {
+  color: var(--accent);
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  color: var(--muted);
+  max-width: 560px;
+  line-height: 1.7;
+}
+
+.subtitle strong {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.heroCta {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+}
+
+.btnPrimary {
+  background: var(--accent);
+  color: var(--bg);
+  padding: 0.65rem 1.4rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  letter-spacing: 0.02em;
+  transition: background 0.15s;
+}
+
+.btnPrimary:hover { background: var(--accent-dim); }
+
+.btnGhost {
+  color: var(--muted);
+  padding: 0.65rem 1.4rem;
+  font-size: 0.9rem;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.btnGhost:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+
+/* ── Infra bar ── */
+.infraBar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  border: 1px solid var(--border);
+  margin-bottom: 4rem;
+}
+
+.infraItem {
+  padding: 1.1rem 1.25rem;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.infraItem:last-child { border-right: none; }
+
+.infraLabel {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
+
+.infraValue {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  color: var(--accent);
+}
+
+.infraNote {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+/* ── Section ── */
+.section {
+  margin-bottom: 4rem;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
+
+.sectionLine {
+  display: block;
+  width: 2rem;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Cards ── */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+
+.card {
+  background: var(--surface);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: background 0.15s;
+}
+
+.card:hover { background: #16161f; }
+
+.cardIcon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.cardName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cardDesc {
+  font-size: 0.82rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* ── Diagram ── */
+.diagram {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 1.5rem;
+  overflow-x: auto;
+}
+
+.pre {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--info);
+  line-height: 1.6;
+  white-space: pre;
+}
+
+/* ── Footer ── */
+.footer {
+  border-top: 1px solid var(--border);
+  padding-top: 2rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--muted);
+  text-align: center;
+}
