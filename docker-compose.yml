@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  # Database Service
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: stark-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: stark_user
+      POSTGRES_PASSWORD: stark_secure_password
+      POSTGRES_DB: stark_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Next.js Application Service
+  nextjs-app:
+    build:
+      context: ./nextjs-app
+      dockerfile: Dockerfile
+    container_name: stark-nextjs
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://stark_user:stark_secure_password@postgres-db:5432/stark_db?schema=public
+    depends_on:
+      - postgres-db
+
+volumes:
+  postgres_data:
