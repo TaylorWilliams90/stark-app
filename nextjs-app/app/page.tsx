@@ -53,7 +53,7 @@ export default function Home() {
         </p>
         <div className={styles.heroCta}>
           <a
-            href="https://github.com"
+            href="https://github.com/TaylorWilliams90/stark-app"
             target="_blank"
             rel="noopener noreferrer"
             className={styles.btnPrimary}
@@ -102,21 +102,20 @@ export default function Home() {
         </h2>
         <div className={styles.diagram}>
           <pre className={styles.pre}>{`
-  ┌─────────────────────────────────────────────┐
-  │            stark_network (bridge)            │
-  │                                             │
-  │  ┌──────────────────┐   ┌────────────────┐  │
-  │  │   stark_web      │   │   db_service   │  │
-  │  │   Next.js :3000  │──▶│  Postgres :5432│  │
-  │  │  (this page!)    │   │                │  │
-  │  └────────┬─────────┘   └────────────────┘  │
-  │           │                                 │
-  └───────────┼─────────────────────────────────┘
-              │ port 3000
-         ┌────▼────┐
-         │  Your   │
-         │ Browser │
-         └─────────┘
+http://localhost:8080
+        │
+  k3d LoadBalancer (Traefik Ingress)
+        │
+  ┌─────────────────────────────┐
+  │   nextjs pod 1  (port 3000) │
+  │   nextjs pod 2  (port 3000) │  ← Round-robin load balanced
+  │   nextjs pod 3  (port 3000) │  ← Auto-scales to 10 pods at 70% CPU
+  └─────────────────────────────┘
+        │
+  postgres-0 (StatefulSet)
+  ├── 1Gi PersistentVolumeClaim
+  ├── users table (bcrypt passwords, roles, verified flag)
+  └── sessions table
           `.trim()}</pre>
         </div>
       </section>

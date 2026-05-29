@@ -1,0 +1,868 @@
+{
+  "version": 4,
+  "terraform_version": "1.15.3",
+  "serial": 83,
+  "lineage": "80f6f628-dc86-d855-8ba4-32a25ed37811",
+  "outputs": {
+    "app_url": {
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    "cluster_name": {
+      "value": "stark-cluster",
+      "type": "string"
+    },
+    "nextjs_replicas": {
+      "value": 3,
+      "type": "number"
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "kubernetes_config_map",
+      "name": "nextjs_config",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "binary_data": null,
+            "data": {
+              "NODE_ENV": "production"
+            },
+            "id": "stark/nextjs-config",
+            "immutable": false,
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "nextjs-config",
+                "namespace": "stark",
+                "resource_version": "876",
+                "uid": "715c51b6-cb5e-4897-b8a4-1fc9658345f9"
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "ConfigMap",
+            "name": "nextjs-config",
+            "namespace": "stark"
+          },
+          "private": "bnVsbA==",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_config_map",
+      "name": "postgres_init",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "binary_data": null,
+            "data": {
+              "01_schema.sql": "-- ─────────────────────────────────────────────\r\n-- 01_schema.sql\r\n-- Runs automatically on first Postgres startup.\r\n-- Creates all tables needed for auth.\r\n-- ─────────────────────────────────────────────\r\n\r\nCREATE TABLE IF NOT EXISTS users (\r\n  id           SERIAL PRIMARY KEY,\r\n  email        VARCHAR(255) UNIQUE NOT NULL,\r\n  password     VARCHAR(255)        NOT NULL,   -- always store bcrypt hashed, never plaintext\r\n  name         VARCHAR(255),\r\n  role         VARCHAR(50)         NOT NULL DEFAULT 'user',  -- 'user' | 'admin'\r\n  verified     BOOLEAN             NOT NULL DEFAULT FALSE,\r\n  created_at   TIMESTAMP           NOT NULL DEFAULT NOW(),\r\n  updated_at   TIMESTAMP           NOT NULL DEFAULT NOW()\r\n);\r\n\r\n-- Index on email for fast login lookups\r\nCREATE INDEX IF NOT EXISTS idx_users_email ON users (email);\r\n\r\n-- ─────────────────────────────────────────────\r\n-- Automatically update updated_at on any row change\r\n-- ─────────────────────────────────────────────\r\nCREATE OR REPLACE FUNCTION update_updated_at()\r\nRETURNS TRIGGER AS $$\r\nBEGIN\r\n  NEW.updated_at = NOW();\r\n  RETURN NEW;\r\nEND;\r\n$$ LANGUAGE plpgsql;\r\n\r\nCREATE OR REPLACE TRIGGER users_updated_at\r\n  BEFORE UPDATE ON users\r\n  FOR EACH ROW\r\n  EXECUTE FUNCTION update_updated_at();\r\n\r\n-- ─────────────────────────────────────────────\r\n-- Sessions table — optional, use if you store\r\n-- server-side sessions instead of JWTs\r\n-- ─────────────────────────────────────────────\r\nCREATE TABLE IF NOT EXISTS sessions (\r\n  id           SERIAL PRIMARY KEY,\r\n  user_id      INTEGER      NOT NULL REFERENCES users (id) ON DELETE CASCADE,\r\n  token        VARCHAR(512) NOT NULL UNIQUE,\r\n  expires_at   TIMESTAMP    NOT NULL,\r\n  created_at   TIMESTAMP    NOT NULL DEFAULT NOW()\r\n);\r\n\r\nCREATE INDEX IF NOT EXISTS idx_sessions_token   ON sessions (token);\r\nCREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);\r\n",
+              "02_seed.sql": "-- ─────────────────────────────────────────────\r\n-- 02_seed.sql\r\n-- Runs automatically after 01_schema.sql on\r\n-- first Postgres startup.\r\n--\r\n-- IMPORTANT: Replace the password hash below\r\n-- before deploying to production.\r\n--\r\n-- To generate a real bcrypt hash in Node.js:\r\n--   const bcrypt = require('bcrypt');\r\n--   console.log(await bcrypt.hash('your-password', 10));\r\n-- ─────────────────────────────────────────────\r\n\r\nINSERT INTO users (email, password, name, role, verified)\r\nVALUES (\r\n  'admin@stark.com',\r\n  '$2b$10$REPLACEME.REPLACEME.REPLACEME.REPLACEME.REPLACEME.RE',  -- ← replace this hash\r\n  'Stark Admin',\r\n  'admin',\r\n  TRUE\r\n)\r\nON CONFLICT (email) DO NOTHING;\r\n"
+            },
+            "id": "stark/postgres-init",
+            "immutable": false,
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "postgres-init",
+                "namespace": "stark",
+                "resource_version": "877",
+                "uid": "694deee4-bd1f-463f-88cc-28d73052b1af"
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "ConfigMap",
+            "name": "postgres-init",
+            "namespace": "stark"
+          },
+          "private": "bnVsbA==",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_namespace",
+      "name": "stark",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "stark",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "stark",
+                "resource_version": "873",
+                "uid": "d364803e-d3b2-4a6b-b315-13a2e4f0933d"
+              }
+            ],
+            "timeouts": null,
+            "wait_for_default_service_account": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "Namespace",
+            "name": "stark"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjozMDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_persistent_volume_claim",
+      "name": "postgres_pvc",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "stark/postgres-pvc",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "postgres-pvc",
+                "namespace": "stark",
+                "resource_version": "880",
+                "uid": "01bc485f-efff-4557-af72-c531a04d0469"
+              }
+            ],
+            "spec": [
+              {
+                "access_modes": [
+                  "ReadWriteOnce"
+                ],
+                "resources": [
+                  {
+                    "limits": null,
+                    "requests": {
+                      "storage": "1Gi"
+                    }
+                  }
+                ],
+                "selector": [],
+                "storage_class_name": "local-path",
+                "volume_mode": "Filesystem",
+                "volume_name": ""
+              }
+            ],
+            "timeouts": null,
+            "wait_until_bound": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_secret",
+      "name": "postgres_secret",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "binary_data": null,
+            "binary_data_wo": null,
+            "binary_data_wo_revision": null,
+            "data": {
+              "DATABASE_URL": "postgresql://stark_user:your-strong-password-here@postgres-service:5432/stark_db?schema=public",
+              "POSTGRES_DB": "stark_db",
+              "POSTGRES_PASSWORD": "your-strong-password-here",
+              "POSTGRES_USER": "stark_user"
+            },
+            "data_wo": null,
+            "data_wo_revision": null,
+            "id": "stark/postgres-secret",
+            "immutable": false,
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "postgres-secret",
+                "namespace": "stark",
+                "resource_version": "878",
+                "uid": "d3199b39-6ebb-4dcf-92b2-75238ad91bff"
+              }
+            ],
+            "timeouts": null,
+            "type": "Opaque",
+            "wait_for_service_account_token": true
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "binary_data"
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "data"
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "data"
+              },
+              {
+                "type": "index",
+                "value": {
+                  "value": "DATABASE_URL",
+                  "type": "string"
+                }
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "data"
+              },
+              {
+                "type": "index",
+                "value": {
+                  "value": "POSTGRES_PASSWORD",
+                  "type": "string"
+                }
+              }
+            ]
+          ],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "Secret",
+            "name": "postgres-secret",
+            "namespace": "stark"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_service",
+      "name": "nextjs_service",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "id": "stark/nextjs-service",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "nextjs-service",
+                "namespace": "stark",
+                "resource_version": "891",
+                "uid": "c09ee253-e8e8-4ee5-9309-3e5d93300312"
+              }
+            ],
+            "spec": [
+              {
+                "allocate_load_balancer_node_ports": true,
+                "cluster_ip": "10.43.219.57",
+                "cluster_ips": [
+                  "10.43.219.57"
+                ],
+                "external_ips": null,
+                "external_name": "",
+                "external_traffic_policy": "Cluster",
+                "health_check_node_port": 0,
+                "internal_traffic_policy": "Cluster",
+                "ip_families": [
+                  "IPv4"
+                ],
+                "ip_family_policy": "SingleStack",
+                "load_balancer_class": "",
+                "load_balancer_ip": "",
+                "load_balancer_source_ranges": null,
+                "port": [
+                  {
+                    "app_protocol": "",
+                    "name": "",
+                    "node_port": 30440,
+                    "port": 80,
+                    "protocol": "TCP",
+                    "target_port": "3000"
+                  }
+                ],
+                "publish_not_ready_addresses": false,
+                "selector": {
+                  "app": "nextjs"
+                },
+                "session_affinity": "None",
+                "session_affinity_config": [],
+                "type": "LoadBalancer"
+              }
+            ],
+            "status": [
+              {
+                "load_balancer": [
+                  {
+                    "ingress": []
+                  }
+                ]
+              }
+            ],
+            "timeouts": null,
+            "wait_for_load_balancer": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "Service",
+            "name": "nextjs-service",
+            "namespace": "stark"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDB9LCJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_service",
+      "name": "postgres_service",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "id": "stark/postgres-service",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "postgres-service",
+                "namespace": "stark",
+                "resource_version": "882",
+                "uid": "4b9361ec-e8d7-4cdc-a33b-0c0d499f97c6"
+              }
+            ],
+            "spec": [
+              {
+                "allocate_load_balancer_node_ports": true,
+                "cluster_ip": "10.43.87.176",
+                "cluster_ips": [
+                  "10.43.87.176"
+                ],
+                "external_ips": null,
+                "external_name": "",
+                "external_traffic_policy": "",
+                "health_check_node_port": 0,
+                "internal_traffic_policy": "Cluster",
+                "ip_families": [
+                  "IPv4"
+                ],
+                "ip_family_policy": "SingleStack",
+                "load_balancer_class": "",
+                "load_balancer_ip": "",
+                "load_balancer_source_ranges": null,
+                "port": [
+                  {
+                    "app_protocol": "",
+                    "name": "",
+                    "node_port": 0,
+                    "port": 5432,
+                    "protocol": "TCP",
+                    "target_port": "5432"
+                  }
+                ],
+                "publish_not_ready_addresses": false,
+                "selector": {
+                  "app": "postgres"
+                },
+                "session_affinity": "None",
+                "session_affinity_config": [],
+                "type": "ClusterIP"
+              }
+            ],
+            "status": [
+              {
+                "load_balancer": [
+                  {
+                    "ingress": []
+                  }
+                ]
+              }
+            ],
+            "timeouts": null,
+            "wait_for_load_balancer": true
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "Service",
+            "name": "postgres-service",
+            "namespace": "stark"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDB9LCJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_stateful_set",
+      "name": "postgres",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "id": "stark/postgres",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 1,
+                "labels": null,
+                "name": "postgres",
+                "namespace": "stark",
+                "resource_version": "968",
+                "uid": "68113978-5cc4-439d-846a-844b7c499b3e"
+              }
+            ],
+            "spec": [
+              {
+                "min_ready_seconds": 0,
+                "persistent_volume_claim_retention_policy": [
+                  {
+                    "when_deleted": "Retain",
+                    "when_scaled": "Retain"
+                  }
+                ],
+                "pod_management_policy": "OrderedReady",
+                "replicas": "1",
+                "revision_history_limit": 0,
+                "selector": [
+                  {
+                    "match_expressions": [],
+                    "match_labels": {
+                      "app": "postgres"
+                    }
+                  }
+                ],
+                "service_name": "postgres-service",
+                "template": [
+                  {
+                    "metadata": [
+                      {
+                        "annotations": null,
+                        "generate_name": "",
+                        "generation": 0,
+                        "labels": {
+                          "app": "postgres"
+                        },
+                        "name": "",
+                        "namespace": "",
+                        "resource_version": "",
+                        "uid": ""
+                      }
+                    ],
+                    "spec": [
+                      {
+                        "active_deadline_seconds": 0,
+                        "affinity": [],
+                        "automount_service_account_token": true,
+                        "container": [
+                          {
+                            "args": null,
+                            "command": null,
+                            "env": [
+                              {
+                                "name": "POSTGRES_USER",
+                                "value": "",
+                                "value_from": [
+                                  {
+                                    "config_map_key_ref": [],
+                                    "field_ref": [],
+                                    "resource_field_ref": [],
+                                    "secret_key_ref": [
+                                      {
+                                        "key": "POSTGRES_USER",
+                                        "name": "postgres-secret",
+                                        "optional": false
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "POSTGRES_PASSWORD",
+                                "value": "",
+                                "value_from": [
+                                  {
+                                    "config_map_key_ref": [],
+                                    "field_ref": [],
+                                    "resource_field_ref": [],
+                                    "secret_key_ref": [
+                                      {
+                                        "key": "POSTGRES_PASSWORD",
+                                        "name": "postgres-secret",
+                                        "optional": false
+                                      }
+                                    ]
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "POSTGRES_DB",
+                                "value": "",
+                                "value_from": [
+                                  {
+                                    "config_map_key_ref": [],
+                                    "field_ref": [],
+                                    "resource_field_ref": [],
+                                    "secret_key_ref": [
+                                      {
+                                        "key": "POSTGRES_DB",
+                                        "name": "postgres-secret",
+                                        "optional": false
+                                      }
+                                    ]
+                                  }
+                                ]
+                              }
+                            ],
+                            "env_from": [],
+                            "image": "postgres:15-alpine",
+                            "image_pull_policy": "IfNotPresent",
+                            "lifecycle": [],
+                            "liveness_probe": [
+                              {
+                                "exec": [
+                                  {
+                                    "command": [
+                                      "pg_isready",
+                                      "-U",
+                                      "stark_user",
+                                      "-d",
+                                      "stark_db"
+                                    ]
+                                  }
+                                ],
+                                "failure_threshold": 3,
+                                "grpc": [],
+                                "http_get": [],
+                                "initial_delay_seconds": 15,
+                                "period_seconds": 10,
+                                "success_threshold": 1,
+                                "tcp_socket": [],
+                                "timeout_seconds": 1
+                              }
+                            ],
+                            "name": "postgres",
+                            "port": [
+                              {
+                                "container_port": 5432,
+                                "host_ip": "",
+                                "host_port": 0,
+                                "name": "",
+                                "protocol": "TCP"
+                              }
+                            ],
+                            "readiness_probe": [
+                              {
+                                "exec": [
+                                  {
+                                    "command": [
+                                      "pg_isready",
+                                      "-U",
+                                      "stark_user",
+                                      "-d",
+                                      "stark_db"
+                                    ]
+                                  }
+                                ],
+                                "failure_threshold": 3,
+                                "grpc": [],
+                                "http_get": [],
+                                "initial_delay_seconds": 5,
+                                "period_seconds": 5,
+                                "success_threshold": 1,
+                                "tcp_socket": [],
+                                "timeout_seconds": 1
+                              }
+                            ],
+                            "resources": [
+                              {
+                                "limits": {
+                                  "cpu": "500m",
+                                  "memory": "512Mi"
+                                },
+                                "requests": {
+                                  "cpu": "250m",
+                                  "memory": "256Mi"
+                                }
+                              }
+                            ],
+                            "security_context": [],
+                            "startup_probe": [],
+                            "stdin": false,
+                            "stdin_once": false,
+                            "termination_message_path": "/dev/termination-log",
+                            "termination_message_policy": "File",
+                            "tty": false,
+                            "volume_device": [],
+                            "volume_mount": [
+                              {
+                                "mount_path": "/var/lib/postgresql/data",
+                                "mount_propagation": "None",
+                                "name": "postgres-data",
+                                "read_only": false,
+                                "sub_path": "postgres",
+                                "sub_path_expr": ""
+                              },
+                              {
+                                "mount_path": "/docker-entrypoint-initdb.d",
+                                "mount_propagation": "None",
+                                "name": "postgres-init",
+                                "read_only": true,
+                                "sub_path": "",
+                                "sub_path_expr": ""
+                              }
+                            ],
+                            "working_dir": ""
+                          }
+                        ],
+                        "dns_config": [],
+                        "dns_policy": "ClusterFirst",
+                        "enable_service_links": true,
+                        "host_aliases": [],
+                        "host_ipc": false,
+                        "host_network": false,
+                        "host_pid": false,
+                        "hostname": "",
+                        "image_pull_secrets": [],
+                        "init_container": [],
+                        "node_name": "",
+                        "node_selector": null,
+                        "os": [],
+                        "priority_class_name": "",
+                        "readiness_gate": [],
+                        "restart_policy": "Always",
+                        "runtime_class_name": "",
+                        "scheduler_name": "default-scheduler",
+                        "security_context": [],
+                        "service_account_name": "",
+                        "share_process_namespace": false,
+                        "subdomain": "",
+                        "termination_grace_period_seconds": 30,
+                        "toleration": [],
+                        "topology_spread_constraint": [],
+                        "volume": [
+                          {
+                            "aws_elastic_block_store": [],
+                            "azure_disk": [],
+                            "azure_file": [],
+                            "ceph_fs": [],
+                            "cinder": [],
+                            "config_map": [],
+                            "csi": [],
+                            "downward_api": [],
+                            "empty_dir": [],
+                            "ephemeral": [],
+                            "fc": [],
+                            "flex_volume": [],
+                            "flocker": [],
+                            "gce_persistent_disk": [],
+                            "git_repo": [],
+                            "glusterfs": [],
+                            "host_path": [],
+                            "iscsi": [],
+                            "local": [],
+                            "name": "postgres-data",
+                            "nfs": [],
+                            "persistent_volume_claim": [
+                              {
+                                "claim_name": "postgres-pvc",
+                                "read_only": false
+                              }
+                            ],
+                            "photon_persistent_disk": [],
+                            "projected": [],
+                            "quobyte": [],
+                            "rbd": [],
+                            "secret": [],
+                            "vsphere_volume": []
+                          },
+                          {
+                            "aws_elastic_block_store": [],
+                            "azure_disk": [],
+                            "azure_file": [],
+                            "ceph_fs": [],
+                            "cinder": [],
+                            "config_map": [
+                              {
+                                "default_mode": "0644",
+                                "items": [],
+                                "name": "postgres-init",
+                                "optional": false
+                              }
+                            ],
+                            "csi": [],
+                            "downward_api": [],
+                            "empty_dir": [],
+                            "ephemeral": [],
+                            "fc": [],
+                            "flex_volume": [],
+                            "flocker": [],
+                            "gce_persistent_disk": [],
+                            "git_repo": [],
+                            "glusterfs": [],
+                            "host_path": [],
+                            "iscsi": [],
+                            "local": [],
+                            "name": "postgres-init",
+                            "nfs": [],
+                            "persistent_volume_claim": [],
+                            "photon_persistent_disk": [],
+                            "projected": [],
+                            "quobyte": [],
+                            "rbd": [],
+                            "secret": [],
+                            "vsphere_volume": []
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "update_strategy": [],
+                "volume_claim_template": []
+              }
+            ],
+            "timeouts": null,
+            "wait_for_rollout": true
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "apps/v1",
+            "kind": "StatefulSet",
+            "name": "postgres",
+            "namespace": "stark"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6NjAwMDAwMDAwMDAwLCJyZWFkIjo2MDAwMDAwMDAwMDAsInVwZGF0ZSI6NjAwMDAwMDAwMDAwfSwic2NoZW1hX3ZlcnNpb24iOiIxIn0=",
+          "dependencies": [
+            "kubernetes_config_map.postgres_init",
+            "kubernetes_namespace.stark",
+            "kubernetes_persistent_volume_claim.postgres_pvc",
+            "kubernetes_secret.postgres_secret",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "null_resource",
+      "name": "build_nextjs_image",
+      "provider": "provider[\"registry.terraform.io/hashicorp/null\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "5902099936230713405",
+            "triggers": {
+              "dir_sha": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "dependencies": [
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "null_resource",
+      "name": "k3d_cluster",
+      "provider": "provider[\"registry.terraform.io/hashicorp/null\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "3391088495305204132",
+            "triggers": {
+              "cluster_name": "stark-cluster"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}

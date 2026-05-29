@@ -1,0 +1,427 @@
+{
+  "version": 4,
+  "terraform_version": "1.15.3",
+  "serial": 50,
+  "lineage": "80f6f628-dc86-d855-8ba4-32a25ed37811",
+  "outputs": {
+    "app_url": {
+      "value": "http://localhost:8080",
+      "type": "string"
+    },
+    "cluster_name": {
+      "value": "stark-cluster",
+      "type": "string"
+    },
+    "nextjs_replicas": {
+      "value": 3,
+      "type": "number"
+    }
+  },
+  "resources": [
+    {
+      "mode": "managed",
+      "type": "kubernetes_config_map",
+      "name": "nextjs_config",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "binary_data": null,
+            "data": {
+              "NODE_ENV": "production"
+            },
+            "id": "stark/nextjs-config",
+            "immutable": false,
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "nextjs-config",
+                "namespace": "stark",
+                "resource_version": "1035",
+                "uid": "c31b7b63-7cb9-4ecb-ac96-4a61ed166501"
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "ConfigMap",
+            "name": "nextjs-config",
+            "namespace": "stark"
+          },
+          "private": "bnVsbA==",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_config_map",
+      "name": "postgres_init",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "binary_data": null,
+            "data": {
+              "01_schema.sql": "-- ─────────────────────────────────────────────\r\n-- 01_schema.sql\r\n-- Runs automatically on first Postgres startup.\r\n-- Creates all tables needed for auth.\r\n-- ─────────────────────────────────────────────\r\n\r\nCREATE TABLE IF NOT EXISTS users (\r\n  id           SERIAL PRIMARY KEY,\r\n  email        VARCHAR(255) UNIQUE NOT NULL,\r\n  password     VARCHAR(255)        NOT NULL,   -- always store bcrypt hashed, never plaintext\r\n  name         VARCHAR(255),\r\n  role         VARCHAR(50)         NOT NULL DEFAULT 'user',  -- 'user' | 'admin'\r\n  verified     BOOLEAN             NOT NULL DEFAULT FALSE,\r\n  created_at   TIMESTAMP           NOT NULL DEFAULT NOW(),\r\n  updated_at   TIMESTAMP           NOT NULL DEFAULT NOW()\r\n);\r\n\r\n-- Index on email for fast login lookups\r\nCREATE INDEX IF NOT EXISTS idx_users_email ON users (email);\r\n\r\n-- ─────────────────────────────────────────────\r\n-- Automatically update updated_at on any row change\r\n-- ─────────────────────────────────────────────\r\nCREATE OR REPLACE FUNCTION update_updated_at()\r\nRETURNS TRIGGER AS $$\r\nBEGIN\r\n  NEW.updated_at = NOW();\r\n  RETURN NEW;\r\nEND;\r\n$$ LANGUAGE plpgsql;\r\n\r\nCREATE OR REPLACE TRIGGER users_updated_at\r\n  BEFORE UPDATE ON users\r\n  FOR EACH ROW\r\n  EXECUTE FUNCTION update_updated_at();\r\n\r\n-- ─────────────────────────────────────────────\r\n-- Sessions table — optional, use if you store\r\n-- server-side sessions instead of JWTs\r\n-- ─────────────────────────────────────────────\r\nCREATE TABLE IF NOT EXISTS sessions (\r\n  id           SERIAL PRIMARY KEY,\r\n  user_id      INTEGER      NOT NULL REFERENCES users (id) ON DELETE CASCADE,\r\n  token        VARCHAR(512) NOT NULL UNIQUE,\r\n  expires_at   TIMESTAMP    NOT NULL,\r\n  created_at   TIMESTAMP    NOT NULL DEFAULT NOW()\r\n);\r\n\r\nCREATE INDEX IF NOT EXISTS idx_sessions_token   ON sessions (token);\r\nCREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions (user_id);\r\n",
+              "02_seed.sql": "-- ─────────────────────────────────────────────\r\n-- 02_seed.sql\r\n-- Runs automatically after 01_schema.sql on\r\n-- first Postgres startup.\r\n--\r\n-- IMPORTANT: Replace the password hash below\r\n-- before deploying to production.\r\n--\r\n-- To generate a real bcrypt hash in Node.js:\r\n--   const bcrypt = require('bcrypt');\r\n--   console.log(await bcrypt.hash('your-password', 10));\r\n-- ─────────────────────────────────────────────\r\n\r\nINSERT INTO users (email, password, name, role, verified)\r\nVALUES (\r\n  'admin@stark.com',\r\n  '$2b$10$REPLACEME.REPLACEME.REPLACEME.REPLACEME.REPLACEME.RE',  -- ← replace this hash\r\n  'Stark Admin',\r\n  'admin',\r\n  TRUE\r\n)\r\nON CONFLICT (email) DO NOTHING;\r\n"
+            },
+            "id": "stark/postgres-init",
+            "immutable": false,
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "postgres-init",
+                "namespace": "stark",
+                "resource_version": "1037",
+                "uid": "ae738bbb-f51c-46d9-b828-846331a6fe32"
+              }
+            ]
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "ConfigMap",
+            "name": "postgres-init",
+            "namespace": "stark"
+          },
+          "private": "bnVsbA==",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_namespace",
+      "name": "stark",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "stark",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "stark",
+                "resource_version": "1032",
+                "uid": "ea4fc4b3-c1e2-4847-bc47-7fb8b6c6de9d"
+              }
+            ],
+            "timeouts": null,
+            "wait_for_default_service_account": false
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "Namespace",
+            "name": "stark"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjozMDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_persistent_volume_claim",
+      "name": "postgres_pvc",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "status": "tainted",
+          "schema_version": 0,
+          "attributes": {
+            "id": "stark/postgres-pvc",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "postgres-pvc",
+                "namespace": "stark",
+                "resource_version": "",
+                "uid": ""
+              }
+            ],
+            "spec": [
+              {
+                "access_modes": [
+                  "ReadWriteOnce"
+                ],
+                "resources": [
+                  {
+                    "limits": null,
+                    "requests": {
+                      "storage": "1Gi"
+                    }
+                  }
+                ],
+                "selector": [],
+                "storage_class_name": "",
+                "volume_mode": "",
+                "volume_name": ""
+              }
+            ],
+            "timeouts": null,
+            "wait_until_bound": true
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_secret",
+      "name": "postgres_secret",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "binary_data": null,
+            "binary_data_wo": null,
+            "binary_data_wo_revision": null,
+            "data": {
+              "DATABASE_URL": "postgresql://stark_user:your-strong-password-here@postgres-service:5432/stark_db?schema=public",
+              "POSTGRES_DB": "stark_db",
+              "POSTGRES_PASSWORD": "your-strong-password-here",
+              "POSTGRES_USER": "stark_user"
+            },
+            "data_wo": null,
+            "data_wo_revision": null,
+            "id": "stark/postgres-secret",
+            "immutable": false,
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "postgres-secret",
+                "namespace": "stark",
+                "resource_version": "1036",
+                "uid": "eed03524-6d81-4eec-bcc2-5a8a8db434ce"
+              }
+            ],
+            "timeouts": null,
+            "type": "Opaque",
+            "wait_for_service_account_token": true
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "binary_data"
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "data"
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "data"
+              },
+              {
+                "type": "index",
+                "value": {
+                  "value": "DATABASE_URL",
+                  "type": "string"
+                }
+              }
+            ],
+            [
+              {
+                "type": "get_attr",
+                "value": "data"
+              },
+              {
+                "type": "index",
+                "value": {
+                  "value": "POSTGRES_PASSWORD",
+                  "type": "string"
+                }
+              }
+            ]
+          ],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "Secret",
+            "name": "postgres-secret",
+            "namespace": "stark"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMH19",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_service",
+      "name": "postgres_service",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "id": "stark/postgres-service",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "postgres-service",
+                "namespace": "stark",
+                "resource_version": "1043",
+                "uid": "5c5cacc6-fe09-40cf-92f7-71e5898742c4"
+              }
+            ],
+            "spec": [
+              {
+                "allocate_load_balancer_node_ports": true,
+                "cluster_ip": "10.43.110.160",
+                "cluster_ips": [
+                  "10.43.110.160"
+                ],
+                "external_ips": null,
+                "external_name": "",
+                "external_traffic_policy": "",
+                "health_check_node_port": 0,
+                "internal_traffic_policy": "Cluster",
+                "ip_families": [
+                  "IPv4"
+                ],
+                "ip_family_policy": "SingleStack",
+                "load_balancer_class": "",
+                "load_balancer_ip": "",
+                "load_balancer_source_ranges": null,
+                "port": [
+                  {
+                    "app_protocol": "",
+                    "name": "",
+                    "node_port": 0,
+                    "port": 5432,
+                    "protocol": "TCP",
+                    "target_port": "5432"
+                  }
+                ],
+                "publish_not_ready_addresses": false,
+                "selector": {
+                  "app": "postgres"
+                },
+                "session_affinity": "None",
+                "session_affinity_config": [],
+                "type": "ClusterIP"
+              }
+            ],
+            "status": [
+              {
+                "load_balancer": [
+                  {
+                    "ingress": []
+                  }
+                ]
+              }
+            ],
+            "timeouts": null,
+            "wait_for_load_balancer": true
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 1,
+          "identity": {
+            "api_version": "v1",
+            "kind": "Service",
+            "name": "postgres-service",
+            "namespace": "stark"
+          },
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDB9LCJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "kubernetes_namespace.stark",
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "null_resource",
+      "name": "build_nextjs_image",
+      "provider": "provider[\"registry.terraform.io/hashicorp/null\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "5864787236773643355",
+            "triggers": {
+              "dir_sha": "da39a3ee5e6b4b0d3255bfef95601890afd80709"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0,
+          "dependencies": [
+            "null_resource.k3d_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "null_resource",
+      "name": "k3d_cluster",
+      "provider": "provider[\"registry.terraform.io/hashicorp/null\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "3875806710133119855",
+            "triggers": {
+              "cluster_name": "stark-cluster"
+            }
+          },
+          "sensitive_attributes": [],
+          "identity_schema_version": 0
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}

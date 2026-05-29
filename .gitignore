@@ -3,7 +3,11 @@
 .terraform.lock.hcl
 terraform.tfstate
 terraform.tfstate.backup
+terraform.tfvars
 *.tfvars
+
+# Kubeconfig written by Terraform — contains cluster credentials
+.kube-*.yaml
  
 # Next.js
 nextjs-app/node_modules/

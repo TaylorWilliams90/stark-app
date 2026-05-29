@@ -1,21 +1,29 @@
-version: '3.8'
-
 services:
+  # ─────────────────────────────────────────────
   # Database Service
+  # ─────────────────────────────────────────────
   postgres-db:
     image: postgres:15-alpine
     container_name: stark-postgres
     restart: always
     environment:
-      POSTGRES_USER: stark_user
-      POSTGRES_PASSWORD: stark_secure_password
-      POSTGRES_DB: stark_db
-    ports:
-      - "5432:5432"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
 
+  # ─────────────────────────────────────────────
   # Next.js Application Service
+  # ─────────────────────────────────────────────
   nextjs-app:
     build:
       context: ./nextjs-app
@@ -25,9 +33,16 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://stark_user:stark_secure_password@postgres-db:5432/stark_db?schema=public
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-db:5432/${POSTGRES_DB}?schema=public
+      - NODE_ENV=production
     depends_on:
-      - postgres-db
+      postgres-db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+networks:
+  app-network:
 
 volumes:
   postgres_data:
